@@ -120,6 +120,7 @@ class BombmanClient():
         try:
           move = ai.get_move(self.get_map_list(msg.item, msg.mapSize), self.get_bomb_list(msg.bombs), self.get_powerups(msg.powerups), self.get_player_position(msg.players), self.get_explosion_list(msg.explosions), msg.playerNum, msg.responseID)
           new_map = ai.next_world(self.get_map_list(msg.item, msg.mapSize), self.get_bomb_list(msg.bombs), self.get_powerups(msg.powerups), self.get_player_position(msg.players), self.get_explosion_list(msg.explosions), msg.playerNum, msg.responseID)
+
         except:
           move = STAY_STILL
           logging.exception("Unexpected error during turn {0}:".format(msg.responseID))
