@@ -68,7 +68,7 @@ class PlayerAI():
 			
 			bombers: a dictionary that contains the player's current stats. 
 				key: player index (0 or 1)
-				value: a dictionay with keys 'position', 'bomb_range' and 'bomb_count'
+				value: a dictionay with ktime_lefteys 'position', 'bomb_range' and 'bomb_count'
 
 				e.g.
 					bombers[0]['bomb_range'] will return player 1's current bomb range. 
@@ -102,7 +102,7 @@ class PlayerAI():
 
 			# Checks to see if neighbours are walkable, and stores the neighbours which are blocks
 			if map_list[x][y] in WALKABLE:
-				# walkable is a list in enums.py which indicates what type of tiles are walkable
+				# walkablebombers is a list in enums.py which indicates what type of tiles are walkable
 				validmoves.append(move)
 			elif (x, y) in self.blocks: 
 				neighbour_blocks.append((x, y))
@@ -117,7 +117,7 @@ class PlayerAI():
 
 		# can move somewhere, so choose a tile randomly
 		move = validmoves[random.randrange(0, len(validmoves))]
-
+		new_world = next_world(map_list, bombs, powerups, bombers, explosion_list, player_index, move_number)
 		if bombMove: 
 			return move.bombaction
 		else: 
@@ -166,4 +166,51 @@ class PlayerAI():
 			end: a tuple that represents the coordinates of the end postion
 		'''
 		return (abs(start[0]-end[0])+abs(start[1]-end[1]))
-		
+
+
+	def next_world(self, map_list, bombs, powerups, bombers, explosion_list, player_index, move_number):
+		'''
+		Returns a the map with all tiles updated exceot for the opponents movement.  
+
+		Args:
+			see  get_move
+		'''
+
+		world = map_list
+		bomb_list = get_bomb_list(bombs)
+		bomb_queue = Queue()
+		for position, bomb in enumerate bomb_list:
+			bomb['time_left'] -= 1
+			if (bomb['time_left'] == 0):
+				bomb_queue.push([position, bomb])
+
+		while not bomb_queue.empty():
+			current_bomb = queue.get()
+			bomb = current_bomb[1]
+			position = current_bomb[0]
+
+			if world[position[0]][position[1]] != U'BOMB':
+				continue
+
+			for direction in [[1, 0], [0, 1], [-1, 0], [0, -1]]:
+				dx = direction[0]
+				dy = direction[1]
+				for i in range(bomb['bomb_range']):
+					new_x = position[0] + dx*i
+					new_y = position[1] + dy*i
+
+					if world[new_x][new_y] in (U'BLANK', U'POWERUP', U'BLOCK', U'WALL'):
+						old_item = world[new_x][new_y]
+					    if  old_item == U'WALL':
+					    	break
+					    world[new_x][new_y] = U'EXPLOSION'
+					    if old_item == U'BLOCK':
+					    	break
+
+					if world[new_x][new_y] == U'BOMB':
+						bomb_queue.push((new_x, new_y), bomb_list(new_x, new_y))
+					if world[new_x][new_y] == U'PLAYER':
+						# make_safe()
+						pass
+					world[new_x][new_y] = U'EXPLOSION'
+		return world
