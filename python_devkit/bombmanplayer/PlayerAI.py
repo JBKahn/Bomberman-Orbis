@@ -110,7 +110,7 @@ class PlayerAI():
         for i in range(1,17):
             next_world.append(self.next_world((next_world and next_world[-1]) or map_list, bombs,i))
 
-        (depth,direction) = self.find_path(next_world, my_position,'',0)
+        (depth,direction) = self.find_path(map_list, next_world, my_position,'',0)
         move = direction
 
 
@@ -263,46 +263,76 @@ class PlayerAI():
         return world
 
 
-
-    def find_path (self, next_world, position,direction,depth):
+    def find_path_helper(self, next_world, position,direction,depth):
         result = [];
         x = position[1]
         y = position[0]
         if direction:
             x += direction.dx
-            y += direction.dy	
+            y += direction.dy    
+        if (next_world[depth][x][y] not in ['BLANK','POWERUP']):
+            return depth - 1
+        elif depth == 5:
+            return depth
+        directions = Directions.values()
+        # directions[1], directions[4] = directions[4], directions[4]
+        possible_directions = [self.find_path_helper(next_world, (y,x), direction,depth+1) for direction in directions]
+        # if depth == 4:
+            # print 'possible directions',possible_directions
+        # this_max = max(possible_directions,key=lambda x: x[0])
+        # print 'the depth is ', depth, this_max[1].__dict__, this_max[0],x,y
+        return max(possible_directions)
+
+
+    def find_path (self, map_list, next_world, position,direction,depth):
+        result = [];
+        x = position[1]
+        y = position[0]
+        if direction:
+            x += direction.dx
+            y += direction.dy    
         if (next_world[depth][x][y] not in ['BLANK','POWERUP']):
             return (depth - 1,direction)
         elif depth == 5:
             return (depth, direction)
-        # directions = Directions.values()
-        # directions[1], directions[4] = directions[4], directions[4]
-        possible_directions = [self.find_path(next_world, (y,x), direction,depth+1) for direction in Directions.values()]
-        # if depth == 4:
-        	# print 'possible directions',possible_directions
-       	this_max = max(possible_directions,key=lambda x: x[0])
+        directions = Directions.values()
+
+        possible_directions = [(self.find_path_helper(next_world, (y,x), direction,depth+1), direction) for direction in directions]
+        # for direction in possible_directions:
+        # 	actual_direction = self.swap_directions(direction)[1]
+        # 	if map_list[position[1] + actual_direction.dx][position[0] + actual_direction.dy] == 'EXPLOSION':
+        # 		direction[0] = -1
+
+        this_max = max(possible_directions,key=lambda x: x[0])
         print 'the depth is ', depth, this_max[1].__dict__, this_max[0],x,y
         if depth == 0:
-        	# shuffle(possible_directions)
-        	highest_life =  max(possible_directions,key=lambda x: x[0])[0]
-        	best_directions = filter(lambda x: x[0] == highest_life, possible_directions)
-        	print 'The best directions are: \n'
-        	for i in best_directions:
-        		print i[1].__dict__
+            highest_life =  max(possible_directions,key=lambda x: x[0])[0]
+            best_directions = filter(lambda x: x[0] == highest_life, possible_directions)
+            print 'The best directions are: \n'
+            for i in best_directions:
+                print i[1].__dict__
+            print 'but the possible were: \n'
+            for i in possible_directions:
+                print i[1].__dict__
 
-        	return choice(best_directions)
+            return self.swap_directions(choice(best_directions))
         return max(possible_directions,key=lambda x: x[0])
                     
 
-        # '''
-        # depth += 1
+    def swap_directions(self, direct):
+        cur_direct = direct[1]
+        print cur_direct, Directions['up']
+        if cur_direct == Directions['up']:
+            return (direct[0], Directions['left'])
+        elif cur_direct == Directions['down']:
+            return (direct[0], Directions['right'])
+        elif cur_direct == Directions['left']:
+            return (direct[0], Directions['up'])
+        elif cur_direct == Directions['right']:
+            return (direct[0], Directions['down'])
+        return (direct[0], Directions['still'])
 
-        # will i die in this spot at this time? 
-        #     return death, path, depth  
 
-        # if (depth == 10)
-        #     return (depth,path)
-
-        #      find max return depth for recursive left down and right and stay: 
-        #      and return that
-       
+# I was right, swap directiions was the fix, the x and uy were swapped since the map was stored stupidly.
+# ANYWAY. It seems to usually dodge bombs or at least seemed so EXCEPT it walks into currently explloding thngs 
+# i.e. on map_list that have an explosion in it (yes you cna have that). Add a fix for that. I'm going to bed.
