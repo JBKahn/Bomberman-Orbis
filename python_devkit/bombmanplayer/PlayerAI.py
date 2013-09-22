@@ -1,5 +1,5 @@
 #Player.py ai
-import random
+from random import choice
 
 from bombmanclient.Client import *
 from copy import copy
@@ -139,7 +139,7 @@ class PlayerAI():
 
         transform = {'BLOCK':'b', 'WALL':'w', 'BLANK': ' ', 'POWERUP': 'P', 'EXPLOSION': 'x', 'BOMB': 'O'}
         print 'next map is:'
-        for i in next_world[5]:
+        for i in next_world[0]:
             print ''.join([transform.get(spot,spot) for spot in i])
         print 'this map is:'
         for i in map_list:
@@ -275,12 +275,22 @@ class PlayerAI():
             return (depth - 1,direction)
         elif depth == 5:
             return (depth, direction)
-        directions = Directions.values()
-        directions[1], directions[4] = directions[4], directions[4]
-        possible_directions = [self.find_path(next_world, (y,x), direction,depth+1) for direction in [directions[0], directions[2], directions[3], directions[4]]]
+        # directions = Directions.values()
+        # directions[1], directions[4] = directions[4], directions[4]
+        possible_directions = [self.find_path(next_world, (y,x), direction,depth+1) for direction in Directions.values()]
         # if depth == 4:
         	# print 'possible directions',possible_directions
-        print 'the depth is ', depth, max(possible_directions,key=lambda x: x[0])[1].__dict__
+       	this_max = max(possible_directions,key=lambda x: x[0])
+        print 'the depth is ', depth, this_max[1].__dict__, this_max[0],x,y
+        if depth == 0:
+        	# shuffle(possible_directions)
+        	highest_life =  max(possible_directions,key=lambda x: x[0])[0]
+        	best_directions = filter(lambda x: x[0] == highest_life, possible_directions)
+        	print 'The best directions are: \n'
+        	for i in best_directions:
+        		print i[1].__dict__
+
+        	return choice(best_directions)
         return max(possible_directions,key=lambda x: x[0])
                     
 
