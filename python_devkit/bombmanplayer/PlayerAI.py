@@ -2,6 +2,7 @@
 import random
 
 from bombmanclient.Client import *
+from copy import copy
 from Enums import *
 from Direction import *
 from Queue import Queue
@@ -86,44 +87,77 @@ class PlayerAI():
             move_number: the current turn number. Use to deterimine if you have missed turns. 
         '''
 
+        next_world =[]
+        for y in range(16):
+           for x in range(y,16):
+               map_list[x][y], map_list[y][x] = map_list[y][x], map_list[x][y]
+
+
+
         bombMove = False
         my_position = bombers[player_index]['position']
 
         # updating the list of blocks
         for explosion in explosion_list:
+            print explosion_list
             if explosion in self.blocks: 
                 self.blocks.remove(explosion)
+        
+        #sorted_bombs = sorted(copy(bombs), key=lambda bomb: bombs[bomb]['time_left']) 
 
-        validmoves = []
-        neighbour_blocks = [] 
 
-        # find out which directions Bomber can move to.
-        for move in Directions.values():
-            x = my_position[0] + move.dx
-            y = my_position[1] + move.dy
+        for i in range(1,17):
+            next_world.append(self.next_world((next_world and next_world[-1]) or map_list, bombs,i))
 
-            # Checks to see if neighbours are walkable, and stores the neighbours which are blocks
-            if map_list[x][y] in WALKABLE:
-                # walkablebombers is a list in enums.py which indicates what type of tiles are walkable
-                validmoves.append(move)
-            elif (x, y) in self.blocks: 
-                neighbour_blocks.append((x, y))
+        (depth,direction) = self.find_path(next_world, my_position,'',0)
+        move = direction
 
-        # place a bomb if there are blocks that can be destroyed
-        if len(neighbour_blocks) > 0:
-            bombMove = True
+
+
+        # if (next_world[0][my_position[1]][my_position[0]] == 'EXPLOSIION'):
+        #     run = 1; 
+
+
+        # validmoves = []
+        # neighbour_blocks = []
+        # for move in Directions.values():
+        #     x = my_position[0] + move.dx
+        #     y = my_position[1] + move.dy
+
+        #     # Checks to see if neighbours are walkable, and stores the neighbours which are blocks
+        #     if map_list[y][x] in [Enums.MapItems.BLANK, Enums.MapItems.POWERUP] and next_world[0][y][x] != 'EXPLOSIION':
+        #         # walkablebombers is a list in enums.py which indicates what type of tiles are walkable
+        #         # if next_world[x][y] == ''
+        #         validmoves.append(move)
+        #     elif next_world[0][y][x] == 'BLOCK': 
+        #         neighbour_blocks.append((y, x))
+
+        # if len(neighbour_blocks) > 0:
+        #     bombMove = True
+
+
+        transform = {'BLOCK':'b', 'WALL':'w', 'BLANK': ' ', 'POWERUP': 'P', 'EXPLOSION': 'x', 'BOMB': 'O'}
+        print 'next map is:'
+        for i in next_world[5]:
+            print ''.join([transform.get(spot,spot) for spot in i])
+        print 'this map is:'
+        for i in map_list:
+            print ''.join([transform.get(spot,spot) for spot in i])
+
+        print bombs
 
         # there's no where to move to
-        if len(validmoves) == 0: 
-            return Directions['still'].action
+        # if len(validmoves) == 0: 
+        #     return Directions['still'].action
 
-        # can move somewhere, so choose a tile randomly
-        move = validmoves[random.randrange(0, len(validmoves))]
-        new_world = next_world(map_list, bombs, powerups, bombers, explosion_list, player_index, move_number)
-        if bombMove: 
-            return move.bombaction
-        else: 
-            return move.action
+        # # can move somewhere, so choose a tile randomly
+        # move = validmoves[random.randrange(0, len(validmoves))]
+
+
+        # if bombMove: 
+        #     return move.bombaction
+        # else: 
+        return move.action
 
     def path_exists(start, end, map_list):
         ''' 
@@ -170,51 +204,88 @@ class PlayerAI():
         return (abs(start[0]-end[0])+abs(start[1]-end[1]))
 
 
-    def next_world(self, map_list, bombs, powerups, bombers, explosion_list, player_index, move_number):
+    def next_world(self, map_list, bombs,depth):
         '''
         Returns a the map with all tiles updated exceot for the opponents movement.  
 
         Args:
             see  get_move
         '''
+        map_stuff = {'BLOCK':'BLOCK', 'BLANK':'BLANK', 'EXPLOSION':'EXPLOSION', 'BOMB':'BOMB','POWERUP':'POWERUP', 'WALL':'WALL'}
+        world = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+        for index,row in enumerate(map_list):
+            for item in row:
+                world[index].append(map_stuff[item])
 
-        world = map_list
-        bomb_list = {}
-    	for bomb in bombs:
-     		bomb_list[(bomb.pos.x, bomb.pos.y)] = {'owner':bomb.owner, 'range':bomb.range, 'time_left':bomb.timeLeft}
+        for y in range(16):
+           for x in range(16):
+               if world[x][y] == 'EXPLOSION':
+                   world[x][y] = 'BLANK'
 
         bomb_queue = Queue()
-        for position, bomb in enumerate(bomb_list):
-            bomb['time_left'] -= 1
-            if (bomb['time_left'] == 0):
-                bomb_queue.push([position, bomb])
+        for position, bomb in bombs.iteritems():
+            if (bomb['time_left'] == depth):
 
+                bomb_queue.put([position, bomb])
         while not bomb_queue.empty():
-            current_bomb = queue.get()
+            current_bomb = bomb_queue.get(False)
             bomb = current_bomb[1]
             position = current_bomb[0]
-
-            if world[position[0]][position[1]] != U'BOMB':
+            if world[position[1]][position[0]] != 'BOMB':
                 continue
+            world[position[1]][position[0]] = 'EXPLOSION'
+
 
             for direction in [[1, 0], [0, 1], [-1, 0], [0, -1]]:
                 dx = direction[0]
                 dy = direction[1]
-                for i in range(bomb['bomb_range']):
-                    new_x = position[0] + dx*i
-                    new_y = position[1] + dy*i
-                    if world[new_x][new_y] in (U'BLANK', U'POWERUP', U'BLOCK', U'WALL'):
-                        old_item = world[new_x][new_y]
-                        if old_item == U'WALL':
+                for i in range(1,bomb['range']+1):
+                    new_y = position[0] + dx*i
+                    new_x = position[1] + dy*i
+                    old_item = world[new_x][new_y]
+                    if old_item in ('BLANK', 'POWERUP', 'BLOCK', 'WALL'):
+                        if old_item == 'WALL':
                             break
-                        world[new_x][new_y] = U'EXPLOSION'
-                        if old_item == U'BLOCK':
+                        world[new_x][new_y] = 'EXPLOSION'
+                        if old_item == 'BLOCK':
                             break
+                    if old_item == 'BOMB':
+                        if bombs.get((new_y, new_x)):
+                            bomb_queue.put([(new_y, new_x), bombs[(new_y, new_x)]])
+                            bombs[(new_y, new_x)]['time_left']= min (bombs[(new_y, new_x)]['time_left'],bomb['time_left'])
 
-                    if world[new_x][new_y] == U'BOMB':
-                        bomb_queue.push((new_x, new_y), bomb_list(new_x, new_y))
-                    if world[new_x][new_y] == U'PLAYER':
+                    if old_item == 'PLAYER':
                         # make_safe()
                         pass
-                    world[new_x][new_y] = U'EXPLOSION'
+                    if old_item is not 'BOMB':
+                        world[new_x][new_y] = 'EXPLOSION'
         return world
+
+
+
+    def find_path (self, next_world, position,direction,depth):
+        result = [];
+        x = position[1]
+        y = position[0]
+        if direction:
+            x += direction.dx
+            y += direction.dy	
+        if (next_world[depth][x][y] not in ['BLANK','POWERUP']):
+            return (depth,direction)
+        elif depth == 5:
+            return (depth, direction)
+        return max([(self.find_path(next_world, (y,x), direction,depth+1),direction) for direction in Directions.values()],key=lambda x: x[0])
+                    
+
+        # '''
+        # depth += 1
+
+        # will i die in this spot at this time? 
+        #     return death, path, depth  
+
+        # if (depth == 10)
+        #     return (depth,path)
+
+        #      find max return depth for recursive left down and right and stay: 
+        #      and return that
+       
