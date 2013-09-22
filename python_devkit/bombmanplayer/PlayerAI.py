@@ -276,7 +276,7 @@ class PlayerAI():
         elif depth == 5:
             return (depth, direction)
         directions = Directions.values()
-        directions[1], directions[4] = directions[4], directions[4]
+        directions = directions[0] + directions[2:5]
         possible_directions = [self.find_path(next_world, (y,x), direction,depth+1) for direction in directions]
         # if depth == 4:
         	# print 'possible directions',possible_directions
