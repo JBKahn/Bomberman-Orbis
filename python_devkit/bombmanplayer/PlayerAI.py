@@ -40,6 +40,7 @@ class PlayerAI():
             bombers[player_index][0] returns your starting position
 
         '''
+        # import ipdb; ipdb.set_trace()
         self.blocks = blocks_list[:]
 
     def get_move(self, map_list, bombs, powerups, bombers, explosion_list, player_index, move_number):
@@ -271,10 +272,16 @@ class PlayerAI():
             x += direction.dx
             y += direction.dy	
         if (next_world[depth][x][y] not in ['BLANK','POWERUP']):
-            return (depth,direction)
+            return (depth - 1,direction)
         elif depth == 5:
             return (depth, direction)
-        return max([(self.find_path(next_world, (y,x), direction,depth+1),direction) for direction in Directions.values()],key=lambda x: x[0])
+        directions = Directions.values()
+        directions[1], directions[4] = directions[4], directions[4]
+        possible_directions = [self.find_path(next_world, (y,x), direction,depth+1) for direction in directions]
+        # if depth == 4:
+        	# print 'possible directions',possible_directions
+        print 'the depth is ', depth, max(possible_directions,key=lambda x: x[0])[1].__dict__
+        return max(possible_directions,key=lambda x: x[0])
                     
 
         # '''
