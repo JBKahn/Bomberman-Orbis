@@ -218,10 +218,10 @@ class PlayerAI():
             for item in row:
                 world[index].append(map_stuff[item])
 
-        for y in range(16):
-           for x in range(16):
-               if world[x][y] == 'EXPLOSION':
-                   world[x][y] = 'BLANK'
+        # for y in range(16):
+        #    for x in range(16):
+        #        if world[x][y] == 'EXPLOSION':
+        #            world[x][y] = 'BLANK'
 
         bomb_queue = Queue()
         for position, bomb in bombs.iteritems():
